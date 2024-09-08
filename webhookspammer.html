@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Discord Spammer</title>
+  <style>
+    body {
+      background-color: #f0f0f0;
+      font-family: sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      transition: background-color 0.3s ease;
+    }
+    .container {
+      width: 500px;
+      padding: 20px;
+      background-color: #fff; 
+      border-radius: 10px;
+      box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+      transition: background-color 0.3s ease; 
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    input[type="text"],
+    textarea,
+    input[type="number"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc; 
+      border-radius: 5px;
+      box-sizing: border-box;
+      margin-bottom: 10px;
+      transition: border-color 0.3s ease; 
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease; 
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .output-container {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80%;
+      max-width: 800px;
+      height: 60%;
+      max-height: 600px;
+      background-color: #282c34; 
+      color: #fff;
+      border-radius: 10px;
+      box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+      display: none; 
+      overflow-y: auto; 
+    }
+    .output-header {
+      padding: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #3f424a; 
+      position: sticky; 
+      top: 0;
+      background-color: #282c34; 
+      z-index: 1; 
+    }
+    .output-header h2 {
+      margin: 0;
+    }
+    .close-button {
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+    .output-body {
+      padding: 10px;
+      font-family: "Courier New", Courier, monospace;
+      white-space: pre-wrap;
+      overflow-y: auto; 
+      opacity: 0.5; 
+      transition: opacity 0.3s ease; 
+    }
+    .success {
+      color: #4CAF50; 
+    }
+    .success:before {
+      content: "+"; 
+      display: inline-block;
+      margin-right: 10px; 
+      color: #4CAF50; 
+    }
+    .error {
+      color: #f44336;
+    }
+    .stopped {
+      color: #ff8c00;
+    }
+    .dark-mode {
+      background-color: #282c34;
+      color: #fff;
+    }
+    .dark-mode input[type="text"],
+    .dark-mode textarea,
+    .dark-mode input[type="number"] {
+      border: 1px solid #555; 
+    }
+    .dark-mode button {
+      background-color: #007bff; 
+    }
+    .dark-mode button:hover {
+      background-color: #0069d9;
+    }
+    .settings-button {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 8px;
+      border-radius: 50%;
+      background-color: #ccc;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    .settings-button:hover {
+      background-color: #bbb;
+    }
+
+    .settings-icon {
+      font-size: 18px;
+    }
+    .button-container {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+    }
+    .button-container button {
+      flex: 1;
+      margin: 0 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <button class="settings-button" id="settings-button">
+      <span class="settings-icon">⚙️</span>
+    </button>
+    <h1>Discord Spammer</h1>
+
+    <label for="webhook-url">Discord Webhook URL:</label>
+    <input type="text" id="webhook-url" placeholder="https://discord.com/api/webhooks/...">
+
+    <label for="message">Message:</label>
+    <textarea id="message" placeholder="Enter your message here..."></textarea>
+
+    <label for="count">Number of messages:</label>
+    <input type="number" id="count" min="1" value="1">
+
+    <label for="delay">Delay between messages (seconds):</label>
+    <input type="number" id="delay" min="0.1" step="0.1" value="0.7">
+
+    <div class="button-container">
+      <button id="spam-button">Spam</button>
+      <button id="output-button">Output</button>
+    </div>
+
+    <div class="output-container" id="output">
+      <div class="output-header">
+        <h2>Output</h2>
+        <button class="close-button" id="close-button">X</button>
+      </div>
+      <div class="output-body"></div>
+    </div>
+  </div>
+  <script>
+    const webhookUrlInput = document.getElementById('webhook-url');
+    const messageInput = document.getElementById('message');
+    const countInput = document.getElementById('count');
+    const delayInput = document.getElementById('delay');
+    const spamButton = document.getElementById('spam-button');
+    const outputButton = document.getElementById('output-button');
+    const outputContainer = document.getElementById('output');
+    const closeButton = document.getElementById('close-button');
+    const outputBody = document.querySelector('.output-body');
+    const settingsButton = document.getElementById('settings-button');
+    let isSpamming = false;
+    let spamInterval;
+    let messagesSent = 0;
+    let messagesFailed = 0;
+    let isDarkMode = false;
+    function toggleTheme() {
+      isDarkMode = !isDarkMode;
+      document.body.classList.toggle('dark-mode');
+      document.querySelector('.container').classList.toggle('dark-mode');
+      document.querySelectorAll('input[type="text"], textarea, input[type="number"]').forEach(input => {
+        input.classList.toggle('dark-mode');
+      });
+      document.querySelectorAll('button').forEach(button => {
+        button.classList.toggle('dark-mode');
+      });
+    }
+    settingsButton.addEventListener('click', toggleTheme);
+    spamButton.addEventListener('click', () => {
+      const webhookUrl = webhookUrlInput.value;
+      const message = messageInput.value;
+      const count = parseInt(countInput.value, 10); 
+      const delay = parseFloat(delayInput.value) * 1000; 
+
+      if (isSpamming) {
+        clearInterval(spamInterval); 
+        isSpamming = false;
+        spamButton.textContent = 'Spam';
+        return;
+      }
+      if (!webhookUrl || !message || count <= 0 || delay <= 0) {
+        alert('Please fill in all fields correctly!');
+        return;
+      }
+      isSpamming = true;
+      messagesSent = 0;
+      messagesFailed = 0;
+      spamButton.textContent = 'Stop Spamming';
+      spamInterval = setInterval(() => {
+        fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            content: message
+          })
+        })
+        .then(response => {
+          if (response.ok) {
+            messagesSent++;
+            updateOutput(`+ ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} + Sent message to ${webhookUrl}`);
+          } else {
+            messagesFailed++;
+            updateOutput(`- ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - Failed to send message to ${webhookUrl}`);
+          }
+        })
+        .catch(error => {
+          messagesFailed++;
+          updateOutput(`- ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - Failed to send message to ${webhookUrl}`);
+          console.error(error);
+        });
+        if (messagesSent + messagesFailed >= count) {
+          clearInterval(spamInterval);
+          isSpamming = false;
+          spamButton.textContent = 'Spam';
+          updateOutput(`Stopped spamming after ${messagesSent} messages sent and ${messagesFailed} failed messages`); // Updated output message
+        }
+      }, delay);
+    });
+    outputButton.addEventListener('click', () => {
+      outputContainer.style.display = 'block';
+      outputBody.style.opacity = 1; // Make output visible
+    });
+    closeButton.addEventListener('click', () => {
+      outputContainer.style.display = 'none';
+    });
+    function updateOutput(message) {
+      const outputLine = document.createElement('div');
+      if (message.startsWith('+')) {
+        outputLine.classList.add('success');
+        outputLine.textContent = message.substring(1); 
+      } else if (message.startsWith('-')) {
+        outputLine.classList.add('error');
+        outputLine.textContent = message.substring(1);
+      } else {
+        outputLine.classList.add('stopped');
+        outputLine.textContent = message;
+      }
+
+      outputBody.appendChild(outputLine);
+    }
+  </script>
+</body>
+</html>
